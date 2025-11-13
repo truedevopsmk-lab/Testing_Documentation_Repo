@@ -81,15 +81,6 @@ aws ec2 create-subnet \
   --availability-zone us-west-2b \
   --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-1-uswt2-eks-cluster-public-b}]'
 
-
-
-# Private A
-aws ec2 create-subnet \
-  --vpc-id vpc-08a80834636025c17 \
-  --cidr-block 10.143.66.0/26 \
-  --availability-zone us-west-2a \
-  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-mkr-temp-private-a}]'
-
 ```
 
 ---
@@ -100,7 +91,7 @@ aws ec2 create-subnet \
 
 ```bash
 aws ec2 attach-internet-gateway --vpc-id vpc-0abc123xyz --internet-gateway-id igw-0def456uvw
-aws ec2 create-tags --resources igw-0def456uvw --tags Key=Name,Value=PRE-MKR-IGW
+aws ec2 create-tags --resources igw-0def456uvw --tags Key=Name,Value=PRE-Group-IGW
 ```
 
 ### **Create NAT Gateway**
@@ -123,7 +114,7 @@ aws ec2 create-nat-gateway \
 Tag:
 
 ```bash
-aws ec2 create-tags --resources nat-0123abc456def789 --tags Key=Name,Value=PRE-MKR-NAT
+aws ec2 create-tags --resources nat-0123abc456def789 --tags Key=Name,Value=PRE-Group-NAT
 ```
 
 Wait for NAT to become **Available**.
@@ -135,7 +126,7 @@ Wait for NAT to become **Available**.
 We created a custom file:
 
 ```
-pre-mkr-temp-cluster.yaml
+PRE-1-uswt2-eks-cluster.yaml
 ```
 
 ### **Cluster YAML**
@@ -258,7 +249,7 @@ This allows SSH access to worker nodes when required.
 # **9. Create the Cluster**
 
 ```bash
-eksctl create cluster -f pre-mkr-temp-cluster.yaml
+eksctl create cluster -f PRE-4-uswt2-eks-cluster.yaml
 ```
 
 ---
@@ -274,7 +265,7 @@ aws cloudformation list-stacks --stack-status-filter CREATE_IN_PROGRESS CREATE_C
 ### **Check Cluster Status**
 
 ```bash
-aws eks describe-cluster --name PRE-MKR-TEMP-Cluster --region us-west-2 --query "cluster.status"
+aws eks describe-cluster --name PRE-4-uswt2-eks-cluster.yaml --region us-west-2 --query "cluster.status"
 ```
 
 ### **Check Nodes**
@@ -292,7 +283,7 @@ kubectl get componentstatuses
 ### **Add-ons**
 
 ```bash
-eksctl get addons --cluster PRE-MKR-TEMP-Cluster
+eksctl get addons --cluster PRE-4-uswt2-eks-cluster.yaml
 ```
 
 ### **OIDC Details**
