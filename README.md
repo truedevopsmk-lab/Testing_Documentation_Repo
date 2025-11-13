@@ -134,8 +134,8 @@ PRE-1-uswt2-eks-cluster.yaml
 ```yaml
 # ============================================================
 # EKS Cluster + Nodegroup Config (One-shot setup)
-# Name: PRE-4-uswt2-eks-clusterv2
-# File: PRE-4-uswt2-eks-cluster.yaml
+# Name: PRE-1-uswt2-eks-clusterv2
+# File: PRE-1-uswt2-eks-cluster.yaml
 # Region: us-west-2
 # Version: Kubernetes 1.32 (AL2023 compatible)
 # 
@@ -151,7 +151,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: PRE-4-uswt2-eks-clusterv2
+  name: PRE-1-uswt2-eks-clusterv2
   region: us-west-2
   version: "1.32"
 
@@ -251,7 +251,7 @@ This allows SSH access to worker nodes when required.
 # **9. Create the Cluster**
 
 ```bash
-eksctl create cluster -f PRE-4-uswt2-eks-cluster.yaml
+eksctl create cluster -f PRE-1-uswt2-eks-cluster.yaml
 ```
 
 ---
@@ -267,7 +267,7 @@ aws cloudformation list-stacks --stack-status-filter CREATE_IN_PROGRESS CREATE_C
 ### **Check Cluster Status**
 
 ```bash
-aws eks describe-cluster --name PRE-4-uswt2-eks-cluster.yaml --region us-west-2 --query "cluster.status"
+aws eks describe-cluster --name PRE-1-uswt2-eks-cluster.yaml --region us-west-2 --query "cluster.status"
 ```
 
 ### **Check Nodes**
@@ -285,7 +285,7 @@ kubectl get componentstatuses
 ### **Add-ons**
 
 ```bash
-eksctl get addons --cluster PRE-4-uswt2-eks-cluster.yaml
+eksctl get addons --cluster PRE-1-uswt2-eks-cluster.yaml
 ```
 
 ### **OIDC Details**
