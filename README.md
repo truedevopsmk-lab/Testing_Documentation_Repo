@@ -143,6 +143,8 @@ PRE-1-uswt2-eks-cluster.yaml
 # AMI used: ami-063a81f8743fece51 | x86_64
 #
 # Includes: Temporary public access for node bootstrap and can be reverted right after nodegroup creation.
+  # Enable temporary public endpoint for node bootstrap
+  # We can disable it doing - aws eks update-cluster-config --resources-vpc-config endpointPublicAccess=false,endpointPrivateAccess=true
 # ============================================================
 
 apiVersion: eksctl.io/v1alpha5
