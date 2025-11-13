@@ -1,13 +1,10 @@
-Got it, Jarvis will convert this into a **clean, production-ready GitHub Wiki page** with proper GitHub-flavored Markdown, headings, tables, code blocks, and consistent formatting.
-You can paste this **directly into a GitHub Wiki page** (Home.md or a new page).
-
 ---
 
 # **EKS Cluster Setup using EKSCTL**
 
 ## **1. Overview**
 
-This page documents the setup of an Amazon EKS Cluster using **eksctl**, based on our PRE DEV Managed Environment. This includes VPC reuse, subnet configuration, NAT/IGW setup, and the full eksctl cluster configuration along with validation steps.
+This page documents the setup of an Amazon EKS Cluster using **eksctl**, based on our PRE DEV Managed Environment. This includes VPC reuse, subnet configuration, NAT/IGW setup, and the full *eksctl* cluster configuration along with validation steps.
 
 ---
 
@@ -26,18 +23,22 @@ We reused an existing VPC instead of creating one through eksctl.
 
 # **3. VPC & Networking Setup**
 
-Since we did not create the VPC automatically using eksctl, we mapped all subnets manually.
+Since we did not create the VPC automatically using eksctl, we mapped all subnets manually. 
+_(If there are no subnets available, please create them following the steps below in next section)_
 
 ### **Subnets Used**
 
-| Type    | AZ         | Subnet ID                | Name                          |
-| ------- | ---------- | ------------------------ | ----------------------------- |
-| Private | us-west-2a | subnet-0b3364a5802574367 | subnet-pre-mkr-temp-private-a |
-| Private | us-west-2b | subnet-0939805aeee14d4d3 | subnet-pre-mkr-temp-private-b |
-| Public  | us-west-2a | subnet-0fa98a0dc964d561a | subnet-pre-mkr-temp-public-a  |
-| Public  | us-west-2b | subnet-09e7e7daf298189be | subnet-pre-mkr-temp-public-b  |
+Below are the subnets created for the PRE-1 EKS Cluster setup, following the /25(for Private) and /27(for Public) CIDR patterns.
 
-These subnets already had the **Internet Gateway**, **NAT Gateway**, and route table associations configured.
+| Type    | AZ         | CIDR Block       | Name                                     | Subnet ID                |
+| ------- | ---------- | ---------------- | ---------------------------------------- | ------------------------ |
+| Private | us-west-2a | 10.143.70.0/25   | subnet-pre-1-uswt2-eks-cluster-private-a | subnet-0636b5c63f50101ba |
+| Private | us-west-2b | 10.143.70.128/25 | subnet-pre-1-uswt2-eks-cluster-private-b | subnet-0abc54d600fbe43c9 |
+| Public  | us-west-2a | 10.143.71.0/27   | subnet-pre-1-uswt2-eks-cluster-public-a  | subnet-0f0c4b6f86cc48ab8 |
+| Public  | us-west-2b | 10.143.71.32/27  | subnet-pre-1-uswt2-eks-cluster-public-b  | subnet-07ab322a4c1cd1351 |
+
+
+These subnets already had the **Internet Gateway**, **NAT Gateway**, and route table associations configured to support EKS node provisioning..
 
 ---
 
@@ -47,7 +48,41 @@ If these need to be replicated, below are the exact CLI commands used.
 
 ### **Subnet Creation**
 
+If you need to recreate these PRE-1 style subnets, the following CLI commands help replicate the exact structure.
+
+**Subnet Creation**
+
 ```bash
+# Private Subnet - us-west-2a (/25)
+aws ec2 create-subnet \
+  --vpc-id vpc-08a80834636025c17 \
+  --cidr-block 10.143.70.0/25 \
+  --availability-zone us-west-2a \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-1-uswt2-eks-cluster-private-a}]'
+
+# Private Subnet - us-west-2b (/25)
+aws ec2 create-subnet \
+  --vpc-id vpc-08a80834636025c17 \
+  --cidr-block 10.143.70.128/25 \
+  --availability-zone us-west-2b \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-1-uswt2-eks-cluster-private-b}]'
+
+# Public Subnet - us-west-2a (/27)
+aws ec2 create-subnet \
+  --vpc-id vpc-08a80834636025c17 \
+  --cidr-block 10.143.71.0/27 \
+  --availability-zone us-west-2a \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-1-uswt2-eks-cluster-public-a}]'
+
+# Public Subnet - us-west-2b (/27)
+aws ec2 create-subnet \
+  --vpc-id vpc-08a80834636025c17 \
+  --cidr-block 10.143.71.32/27 \
+  --availability-zone us-west-2b \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-1-uswt2-eks-cluster-public-b}]'
+
+
+
 # Private A
 aws ec2 create-subnet \
   --vpc-id vpc-08a80834636025c17 \
@@ -55,26 +90,6 @@ aws ec2 create-subnet \
   --availability-zone us-west-2a \
   --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-mkr-temp-private-a}]'
 
-# Private B
-aws ec2 create-subnet \
-  --vpc-id vpc-08a80834636025c17 \
-  --cidr-block 10.143.66.64/26 \
-  --availability-zone us-west-2b \
-  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-mkr-temp-private-b}]'
-
-# Public A
-aws ec2 create-subnet \
-  --vpc-id vpc-08a80834636025c17 \
-  --cidr-block 10.143.67.0/26 \
-  --availability-zone us-west-2a \
-  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-mkr-temp-public-a}]'
-
-# Public B
-aws ec2 create-subnet \
-  --vpc-id vpc-08a80834636025c17 \
-  --cidr-block 10.143.67.64/26 \
-  --availability-zone us-west-2b \
-  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=subnet-pre-mkr-temp-public-b}]'
 ```
 
 ---
@@ -126,49 +141,95 @@ pre-mkr-temp-cluster.yaml
 ### **Cluster YAML**
 
 ```yaml
+# ============================================================
+# EKS Cluster + Nodegroup Config (One-shot setup)
+# Name: PRE-4-uswt2-eks-clusterv2
+# File: PRE-4-uswt2-eks-cluster.yaml
+# Region: us-west-2
+# Version: Kubernetes 1.32 (AL2023 compatible)
+# 
+# FICO EKS Nodegroup AL2023 Baseline - Built on ami-022a2d9a04badc5e0 [07:49:43 06 Oct 2025]
+# AMI used: ami-063a81f8743fece51 | x86_64
+#
+# Includes: Temporary public access for node bootstrap and can be reverted right after nodegroup creation.
+# ============================================================
+
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
+
 metadata:
-  name: PRE-MKR-TEMP-Cluster
+  name: PRE-4-uswt2-eks-clusterv2
   region: us-west-2
-  version: "1.31"
+  version: "1.32"
 
+# ------------------------------------------------------------
+# VPC CONFIGURATION
+# ------------------------------------------------------------
 vpc:
-  id: vpc-08a80834636025c17
-  subnets:
+  id: vpc-08a80834636025c17              ## Existing VPC ID
+  subnets:                               ## Custom subnets mapped by AZ
     private:
-      us-west-2a: { id: subnet-0b3364a5802574367 }
-      us-west-2b: { id: subnet-0939805aeee14d4d3 }
+      us-west-2a:
+        id: subnet-0636b5c63f50101ba      # 10.143.70.0/25
+      us-west-2b:
+        id: subnet-0abc54d600fbe43c9      # 10.143.70.128/25
     public:
-      us-west-2a: { id: subnet-0fa98a0dc964d561a }
-      us-west-2b: { id: subnet-09e7e7daf298189be }
+      us-west-2a:
+        id: subnet-0f0c4b6f86cc48ab8      # 10.143.71.0/27
+      us-west-2b:
+        id: subnet-07ab322a4c1cd1351      # 10.143.71.32/27
 
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+# ------------------------------------------------------------
+# NODEGROUP CONFIGURATION
+# ------------------------------------------------------------
 managedNodeGroups:
-  - name: ng-pre-mkr-temp-app
-    ami: ami-0991f82bace1d9d8c
-    amiFamily: AmazonLinux2023
-    instanceType: t3.medium
-    desiredCapacity: 2
+  - name: ng-pre-1-eks-cluster        ## Node group name
+    ami: ami-063a81f8743fece51        ## Custom AMI (EKS 1.32 AL2023) - Screenshot below on how to find this.
+    amiFamily: AmazonLinux2023        ## Must specify when using custom AMI (AmazonLinux2023, AmazonLinux2, Bottlerocket,)
+    instanceType: t3.medium           ## Node's EC2 instance type
+    desiredCapacity: 2                ## Count of Desired no.of nodes
     minSize: 1
     maxSize: 3
-    privateNetworking: true
+    privateNetworking: true           ## Use private subnets for nodes
     ssh:
       allow: true
-      publicKeyName: pre-mkr-nodegroup-sshkey
+      publicKeyName: pre-1-sshkey     ## Your SSH key for node access
     securityGroups:
       attachIDs:
-        - sg-03afdf513c0c04772
+        - sg-03afdf513c0c04772        ## Security group for EKS worker nodes — allows communication with control plane and node-to-node traffic.
     labels:
       role: app
     tags:
-      Name: pre-mkr-temp-app-nodes
+      Name: pre-1-app-nodes
 
+    # Recommended IAM Addon Policies
+    iam:
+      withAddonPolicies:
+        awsLoadBalancerController: true
+        autoScaler: true
+        cloudWatch: true
+        ebs: true
+
+# ------------------------------------------------------------
+# LOGGING CONFIGURATION
+# ------------------------------------------------------------
 cloudWatch:
   clusterLogging:
-    enableTypes: ["api", "audit", "authenticator"]
+    enableTypes:
+      - api
+      - audit
+      - authenticator
 
+# ------------------------------------------------------------
+# IAM CONFIGURATION
+# ------------------------------------------------------------
 iam:
   withOIDC: true
+
 ```
 
 ---
@@ -177,8 +238,9 @@ iam:
 
 We used a FICO-specific, custom AL2023 EKS-Optimized AMI for v1.31.
 
-* **AMI Name:** `eks_1.31_nodegroup_al2023_baseline_1.80.0`
-* **AMI ID:** `ami-0991f82bace1d9d8c`
+FICO EKS Nodegroup AL2023 Baseline
+* **AMI Name:** `eks_1.32_nodegroup_al2023_baseline_1.80.0`
+* **AMI ID:** `ami-063a81f8743fece51`
 * **Created On:** 2025-10-06
 
 ---
@@ -187,7 +249,7 @@ We used a FICO-specific, custom AL2023 EKS-Optimized AMI for v1.31.
 
 We reused the existing SSH keypair:
 
-**Key:** `pre-mkr-nodegroup-sshkey`
+**Key:** `pre-1-sshkey`
 
 This allows SSH access to worker nodes when required.
 
@@ -236,7 +298,7 @@ eksctl get addons --cluster PRE-MKR-TEMP-Cluster
 ### **OIDC Details**
 
 ```bash
-aws eks describe-cluster --name PRE-MKR-TEMP-Cluster --query "cluster.identity.oidc.issuer"
+aws eks describe-cluster --name PRE-1-uswt2-eks-cluster --query "cluster.identity.oidc.issuer"
 ```
 
 ### **CloudWatch Logs**
@@ -244,15 +306,15 @@ aws eks describe-cluster --name PRE-MKR-TEMP-Cluster --query "cluster.identity.o
 Navigate to:
 
 ```
-CloudWatch → Logs → /aws/eks/PRE-MKR-TEMP-Cluster/cluster
+CloudWatch → Logs → /aws/eks/PRE-1-uswt2-eks-cluster/cluster
 ```
 
 ---
 
 # **11. Summary**
 
-* Successfully created **PRE-MKR-TEMP-Cluster**
-* Attached **2 worker nodes** using a custom AL2023 AMI
+* Successfully created **PRE-1-uswt2-eks-cluster**
+* Attached **2 worker nodes** using a custom AL2023 AMI _(supporting v1.32 Cluster/Crossplane)_
 * Reused the existing VPC & subnet layout
 * Enabled CloudWatch logging & OIDC integration
 * Verified SSH and SSM access to nodes
